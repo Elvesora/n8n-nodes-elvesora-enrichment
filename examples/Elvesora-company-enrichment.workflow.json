@@ -1,0 +1,62 @@
+{
+	"name": "Elvesora - Enrich a company by domain",
+	"nodes": [
+		{
+			"parameters": {},
+			"id": "6fa73731-2cbc-4a87-9334-838c4b8fa60d",
+			"name": "When clicking Execute workflow",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0]
+		},
+		{
+			"parameters": {
+				"domain": "example.com",
+				"simplify": true,
+				"options": {
+					"idempotencyKey": "n8n-example-example-com-v1"
+				}
+			},
+			"id": "f7e25ebf-ff74-4a12-93ef-83f281435e9d",
+			"name": "Enrich company",
+			"type": "n8n-nodes-elvesora-enrichment.elvesoraEnrichment",
+			"typeVersion": 1,
+			"position": [260, 0]
+		},
+		{
+			"parameters": {
+				"content": "## Elvesora Enrichment example\n\nSelect an **Elvesora Enrichment API** credential on the Enrich company node.\n\nThe example uses a fixed idempotency key for `example.com`. Change the domain and the key together for a different logical request.",
+				"height": 220,
+				"width": 420
+			},
+			"id": "fd65d805-19c4-42a2-a934-b95b2e588e0b",
+			"name": "Setup note",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [-20, -300]
+		}
+	],
+	"pinData": {},
+	"connections": {
+		"When clicking Execute workflow": {
+			"main": [
+				[
+					{
+						"node": "Enrich company",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"active": false,
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"versionId": "356887c0-c4c4-4e08-a079-88cf7cf198ef",
+	"meta": {
+		"templateCredsSetupCompleted": false
+	},
+	"tags": []
+}

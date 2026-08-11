@@ -1,0 +1,66 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to npm with provenance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Require package version to match the Git tag
+        run: node -e "const version = require('./package.json').version; if (version !== process.env.GITHUB_REF_NAME) throw new Error('Tag ' + process.env.GITHUB_REF_NAME + ' does not match package version ' + version)"
+
+      - name: Verify source, tests, build, and package contents
+        run: npm run verify
+
+      - name: Publish release
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          fi
+          npm run release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Wait for the published version to become available
+        shell: bash
+        run: |
+          package="n8n-nodes-elvesora-enrichment@${GITHUB_REF_NAME}"
+          for attempt in {1..12}; do
+            if npm view "$package" version >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Published package did not become visible: $package" >&2
+          exit 1
+
+      - name: Run the n8n community-package scanner
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="n8n-nodes-elvesora-enrichment@${GITHUB_REF_NAME}"
+          scan_output="$(npx --yes @n8n/scan-community-package@0.32.0 "$package" 2>&1)"
+          printf '%s\n' "$scan_output"
+          grep -Fq 'has passed all security checks' <<<"$scan_output"

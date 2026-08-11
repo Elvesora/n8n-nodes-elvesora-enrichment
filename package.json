@@ -1,0 +1,75 @@
+{
+	"name": "n8n-nodes-elvesora-enrichment",
+	"version": "0.1.0",
+	"description": "n8n community node for enriching company data from a website domain with the Elvesora Enrichment API.",
+	"license": "MIT",
+	"homepage": "https://github.com/Elvesora/n8n-nodes-elvesora-enrichment#readme",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"elvesora",
+		"company-enrichment",
+		"data-enrichment",
+		"domain-enrichment"
+	],
+	"author": {
+		"name": "Elvesora",
+		"email": "support@elvesora.com",
+		"url": "https://elvesora.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Elvesora/n8n-nodes-elvesora-enrichment.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Elvesora/n8n-nodes-elvesora-enrichment/issues"
+	},
+	"engines": {
+		"node": ">=22.22.0"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
+		"test:watch": "vitest",
+		"typecheck": "tsc --noEmit",
+		"package:check": "node scripts/validate-package.mjs",
+		"verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run package:check",
+		"release": "n8n-node release",
+		"prepublishOnly": "npm run verify && n8n-node prerelease"
+	},
+	"files": [
+		"dist"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/ElvesoraEnrichmentApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/ElvesoraEnrichment/ElvesoraEnrichment.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "0.43.2",
+		"@vitest/coverage-v8": "4.1.10",
+		"eslint": "9.39.4",
+		"prettier": "3.8.3",
+		"release-it": "20.2.0",
+		"typescript": "5.9.3",
+		"vitest": "4.1.10"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}
