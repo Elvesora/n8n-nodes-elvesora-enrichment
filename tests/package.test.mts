@@ -205,4 +205,44 @@ describe('package metadata', () => {
 			expect(iconSource).toContain('x="21.5"');
 		}
 	});
+
+	it('keeps the importable example on the current node version without credentials', () => {
+		const workflow = JSON.parse(
+			readFileSync(
+				resolve(packageRoot, 'examples/Elvesora-company-enrichment.workflow.json'),
+				'utf8',
+			),
+		) as {
+			nodes: Array<{
+				type: string;
+				typeVersion: number;
+				parameters: Record<string, unknown>;
+				credentials?: Record<string, unknown>;
+			}>;
+		};
+		const exampleNode = workflow.nodes.find(
+			(node) => node.type === `${manifest.name}.elvesoraEnrichment`,
+		);
+
+		expect(exampleNode).toMatchObject({
+			typeVersion: 2,
+			parameters: {
+				domain: 'example.com',
+				simplify: true,
+				options: {
+					idempotencyKey: 'n8n-example-example-com-v1',
+				},
+			},
+		});
+		expect(exampleNode?.credentials).toBeUndefined();
+	});
+
+	it('documents the n8n AI parameter expression without serializing a secret', () => {
+		const readme = readFileSync(resolve(packageRoot, 'README.md'), 'utf8');
+
+		expect(readme).toContain(
+			"{{ $fromAI('domain', 'Company website domain without protocol or path', 'string') }}",
+		);
+		expect(readme).not.toMatch(/Bearer\s+[A-Za-z0-9._-]{20,}/u);
+	});
 });

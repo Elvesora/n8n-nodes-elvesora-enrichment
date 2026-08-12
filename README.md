@@ -12,7 +12,8 @@ node, and this documentation does not claim n8n verification or endorsement.
 - Enrich one company domain for every incoming n8n item.
 - Authenticate with an Elvesora team API token stored as an n8n credential.
 - Verify credentials without consuming an enrichment credit.
-- Return a concise, simplified result or the complete API response.
+- Return a concise result or the complete API response in normal workflows.
+- Limit AI Agent context with Simplified, Raw, or Selected Fields tool output.
 - Preserve HTTP 400 business outcomes as workflow data instead of failing the node.
 - Support Elvesora's 24-hour idempotency contract for safe request replay.
 - Preserve n8n item pairing and support Continue On Fail.
@@ -65,7 +66,7 @@ The credential cannot redirect requests to a custom host.
 1. Add **Elvesora Enrichment** to a workflow.
 2. Select the Elvesora credential.
 3. Enter a **Domain**, for example `example.com`.
-4. Choose whether to enable **Simplify Response**.
+4. Choose whether to enable **Simplify**.
 5. Optionally add an **Idempotency Key** under **Options**.
 6. Execute the workflow.
 
@@ -74,7 +75,7 @@ The credential cannot redirect requests to a custom host.
 | Parameter                 | Required | Default | Behavior                                                                                                     |
 | ------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------ |
 | Domain                    | Yes      | Empty   | Company website domain without a protocol or path. The node trims and lowercases it. Maximum 255 characters. |
-| Simplify Response         | Yes      | `true`  | Returns selected commonly used fields. Disable it to return the complete API payload.                        |
+| Simplify                  | Yes      | `true`  | Normal workflows return commonly used fields by default. Disable it to return the complete API payload.      |
 | Options > Idempotency Key | No       | Empty   | Stable key for one logical request. Maximum 255 characters; control characters are rejected.                 |
 
 The node sends one request for each incoming item, in input order, with a 130-second client
@@ -82,9 +83,9 @@ timeout. It does not perform hidden or automatic retries.
 
 ## Output modes
 
-### Simplified output
+### Normal workflow output
 
-With **Simplify Response** enabled, the node returns available values from this set:
+With **Simplify** enabled, the node returns available values from this set:
 
 - `result_type`
 - `message`
@@ -100,10 +101,35 @@ With **Simplify Response** enabled, the node returns available values from this 
 Fields that are absent from the API response are omitted. A business result still includes its
 status, for example `result_type: NOT_FOUND`, and its API message.
 
-### Raw output
+Disable **Simplify** when downstream steps need the complete company profile, credit metadata,
+or the exact API response.
 
-Disable **Simplify Response** when downstream steps need the complete company profile, credit metadata,
-or the exact API response. A successful response has this general shape:
+### AI Agent tool output
+
+When **Elvesora Enrichment** is connected to an AI Agent as a tool, choose one **Output** mode:
+
+- **Simplified** returns the same maximum-ten-field response documented above.
+- **Raw** returns the complete API response.
+- **Selected Fields** returns only the selected available fields plus `domain`, which is always
+  included as the company identifier. Missing selected fields are omitted.
+
+The default Selected Fields choices are `result_type`, `message`, `company_name`, `industry`,
+`employee_count`, and `hq_country`. Additional choices cover company identity, firmographics,
+headquarters, contacts, addresses, funding, technology, competitors, idempotency status, and credit
+metadata. Nested company and credit values are flattened under their selected field names.
+
+To let an AI Agent supply the domain, use n8n's **Let the model fill in** control or this expression:
+
+```text
+{{ $fromAI('domain', 'Company website domain without protocol or path', 'string') }}
+```
+
+The normal workflow toggle is retained for existing workflows. Workflows saved with node version 1
+continue to use their original `Simplify` behavior.
+
+### Raw response shape
+
+A successful raw response has this general shape:
 
 ```json
 {
@@ -131,9 +157,9 @@ or the exact API response. A successful response has this general shape:
 The company `data` object can contain additional fields. Treat the example as illustrative rather
 than as a fixed response schema.
 
-When the API includes an `Idempotency-Status` response header, a response emitted as raw workflow
-data also includes a lowercase `idempotency_status` field. Replays use `replayed`; a `conflict`
-value can appear in Continue On Fail error output.
+When the API includes an `Idempotency-Status` response header, Raw and applicable Selected Fields
+output include a lowercase `idempotency_status` value. Replays use `replayed`; a `conflict` value can
+appear in Continue On Fail error output.
 
 ## Business outcomes and errors
 
@@ -184,8 +210,8 @@ remains unchanged for every attempt of that logical request.
 
 Import [`Elvesora-company-enrichment.workflow.json`](examples/Elvesora-company-enrichment.workflow.json)
 from this repository into n8n, select your credential, and execute it manually. The example uses
-`example.com` and a fixed demonstration idempotency key. Change the domain and key together when
-adapting it to a real workflow.
+node version 2, `example.com`, and a fixed demonstration idempotency key. Change the domain and key
+together when adapting it to a real workflow.
 
 ## API documentation
 

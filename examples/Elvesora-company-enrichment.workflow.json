@@ -20,7 +20,7 @@
 			"id": "f7e25ebf-ff74-4a12-93ef-83f281435e9d",
 			"name": "Enrich company",
 			"type": "n8n-nodes-elvesora-enrichment.elvesoraEnrichment",
-			"typeVersion": 1,
+			"typeVersion": 2,
 			"position": [260, 0]
 		},
 		{

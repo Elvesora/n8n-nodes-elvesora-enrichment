@@ -19,6 +19,60 @@ const REQUEST_TIMEOUT_MS = 130_000;
 const MAX_INPUT_LENGTH = 255;
 const BEARER_TOKEN_PATTERN = /Bearer\s+[^\s"',}]+/giu;
 
+const SELECTED_FIELD_OPTIONS = [
+	{ name: 'Success', value: 'success' },
+	{ name: 'Result Type', value: 'result_type' },
+	{ name: 'Message', value: 'message' },
+	{ name: 'Idempotency Status', value: 'idempotency_status' },
+	{ name: 'Company Name', value: 'company_name' },
+	{ name: 'Legal Name', value: 'legal_name' },
+	{ name: 'Website URL', value: 'website_url' },
+	{ name: 'Logo URL', value: 'logo_url' },
+	{ name: 'Company Description', value: 'company_description' },
+	{ name: 'DUNS Number', value: 'duns_number' },
+	{ name: 'LEI Number', value: 'lei_number' },
+	{ name: 'Industry', value: 'industry' },
+	{ name: 'Sub-Industry', value: 'sub_industry' },
+	{ name: 'Sector', value: 'sector' },
+	{ name: 'Employee Count', value: 'employee_count' },
+	{ name: 'Founded Year', value: 'founded_year' },
+	{ name: 'Revenue Range', value: 'revenue_range' },
+	{ name: 'IPO Status', value: 'ipo_status' },
+	{ name: 'Stock Symbol', value: 'stock_symbol' },
+	{ name: 'HQ City', value: 'hq_city' },
+	{ name: 'HQ Region', value: 'hq_region' },
+	{ name: 'HQ Country', value: 'hq_country' },
+	{ name: 'Keywords', value: 'keywords' },
+	{ name: 'Social Links', value: 'social_links' },
+	{ name: 'Tags', value: 'tags' },
+	{ name: 'Contacts', value: 'contacts' },
+	{ name: 'Addresses', value: 'addresses' },
+	{ name: 'Funding Rounds', value: 'fundings' },
+	{ name: 'Technology Stack', value: 'tech_stacks' },
+	{ name: 'Competitors', value: 'competitors' },
+	{ name: 'Credit Limit', value: 'credits_limit' },
+	{ name: 'Credits Used', value: 'credits_used' },
+	{ name: 'Credits Remaining', value: 'credits_remaining' },
+	{ name: 'Credits Consumed by Request', value: 'credits_consumed_by_request' },
+	{ name: 'Credit Period Start', value: 'credits_period_started_at' },
+	{ name: 'Credit Period End', value: 'credits_period_ends_at' },
+] as const;
+
+const DEFAULT_SELECTED_FIELDS = [
+	'result_type',
+	'message',
+	'company_name',
+	'industry',
+	'employee_count',
+	'hq_country',
+];
+
+const SELECTABLE_FIELD_NAMES = new Set<string>(
+	SELECTED_FIELD_OPTIONS.map((option) => option.value),
+);
+
+type OutputMode = 'simplified' | 'raw' | 'selected';
+
 interface FullHttpResponse {
 	body: unknown;
 	headers?: Record<string, unknown>;
@@ -229,8 +283,107 @@ function simplifiedOutput(body: IDataObject): IDataObject {
 	return simplified;
 }
 
-function formattedOutput(body: IDataObject, simplify: boolean): IDataObject {
-	return simplify ? simplifiedOutput(body) : body;
+function selectedFieldValue(
+	field: string,
+	body: IDataObject,
+	data: Record<string, unknown>,
+	credits: Record<string, unknown>,
+): unknown {
+	switch (field) {
+		case 'success':
+		case 'result_type':
+		case 'message':
+		case 'idempotency_status':
+			return valueFromRecord(body, field);
+		case 'company_name':
+			return valueFromRecord(data, 'company_name') ?? valueFromRecord(data, 'legal_name');
+		case 'credits_limit':
+			return valueFromRecord(credits, 'limit');
+		case 'credits_used':
+			return valueFromRecord(credits, 'used');
+		case 'credits_remaining':
+			return valueFromRecord(credits, 'remaining');
+		case 'credits_consumed_by_request':
+			return valueFromRecord(credits, 'consumed_by_request');
+		case 'credits_period_started_at':
+			return valueFromRecord(credits, 'period_started_at');
+		case 'credits_period_ends_at':
+			return valueFromRecord(credits, 'period_ends_at');
+		default:
+			return valueFromRecord(data, field);
+	}
+}
+
+function selectedOutput(body: IDataObject, domain: string, fields: string[]): IDataObject {
+	const data = isRecord(body.data) ? body.data : {};
+	const credits = isRecord(body.credits) ? body.credits : {};
+	const selected: IDataObject = {
+		domain: (valueFromRecord(data, 'domain') ??
+			valueFromRecord(body, 'domain') ??
+			domain) as string,
+	};
+
+	for (const field of fields) {
+		const value = selectedFieldValue(field, body, data, credits);
+		if (value !== undefined) {
+			selected[field] = value as IDataObject[string];
+		}
+	}
+
+	return selected;
+}
+
+function formattedOutput(
+	body: IDataObject,
+	domain: string,
+	outputMode: OutputMode,
+	selectedFields: string[],
+): IDataObject {
+	if (outputMode === 'raw') {
+		return body;
+	}
+
+	if (outputMode === 'selected') {
+		return selectedOutput(body, domain, selectedFields);
+	}
+
+	return simplifiedOutput(body);
+}
+
+function isAiToolNode(node: INode): boolean {
+	return node.type.endsWith('Tool');
+}
+
+function validatedOutputMode(value: unknown, node: INode, itemIndex: number): OutputMode {
+	if (value === 'simplified' || value === 'raw' || value === 'selected') {
+		return value;
+	}
+
+	throw new NodeOperationError(node, 'Output mode is invalid', {
+		description: 'Select Simplified, Raw, or Selected Fields.',
+		itemIndex,
+	});
+}
+
+function validatedSelectedFields(value: unknown, node: INode, itemIndex: number): string[] {
+	if (!Array.isArray(value)) {
+		throw new NodeOperationError(node, 'Selected fields are invalid', {
+			description: 'Choose fields from the Selected Fields list.',
+			itemIndex,
+		});
+	}
+
+	const selectedFields = [...new Set(value)];
+	if (
+		selectedFields.some((field) => typeof field !== 'string' || !SELECTABLE_FIELD_NAMES.has(field))
+	) {
+		throw new NodeOperationError(node, 'Selected fields are invalid', {
+			description: 'Choose only fields offered by the Selected Fields list.',
+			itemIndex,
+		});
+	}
+
+	return selectedFields as string[];
 }
 
 function validatedDomain(value: unknown, node: INode, itemIndex: number): string {
@@ -299,7 +452,8 @@ export class ElvesoraEnrichment implements INodeType {
 			dark: 'file:../../icons/elvesora-enrichment.dark.svg',
 		},
 		group: ['transform'],
-		version: 1,
+		version: [1, 2],
+		defaultVersion: 2,
 		subtitle: 'Enrich Company by Domain',
 		description: 'Enrich a company profile from its website domain using Elvesora',
 		defaults: {
@@ -325,12 +479,85 @@ export class ElvesoraEnrichment implements INodeType {
 				description: 'The company website domain to enrich, without a protocol or path',
 			},
 			{
-				displayName: 'Simplify Response',
+				displayName: 'Simplify',
 				name: 'simplify',
 				type: 'boolean',
 				default: true,
 				description:
 					'Whether to return a simplified version of the response instead of the raw data',
+				displayOptions: {
+					show: {
+						'@tool': [false],
+					},
+				},
+			},
+			{
+				displayName: 'Simplify',
+				name: 'simplify',
+				type: 'boolean',
+				default: true,
+				description:
+					'Whether to return a simplified version of the response instead of the raw data',
+				displayOptions: {
+					show: {
+						'@version': [1],
+						'@tool': [true],
+					},
+				},
+			},
+			{
+				displayName: 'Output',
+				name: 'output',
+				type: 'options',
+				noDataExpression: true,
+				default: 'simplified',
+				options: [
+					{
+						name: 'Simplified',
+						value: 'simplified',
+						description: 'Return a simplified version of the response',
+					},
+					{
+						name: 'Raw',
+						value: 'raw',
+						description: 'Return all available fields from the API response',
+					},
+					{
+						name: 'Selected Fields',
+						value: 'selected',
+						description: 'Return only the selected fields',
+					},
+				],
+				displayOptions: {
+					show: {
+						'@version': [2],
+						'@tool': [true],
+					},
+				},
+			},
+			{
+				displayName: 'Selected Fields',
+				name: 'fieldsToInclude',
+				type: 'multiOptions',
+				noDataExpression: true,
+				default: [
+					'result_type',
+					'message',
+					'company_name',
+					'industry',
+					'employee_count',
+					'hq_country',
+				],
+				options: SELECTED_FIELD_OPTIONS.map((option) => ({ ...option })),
+				description:
+					'The fields to return in addition to Domain, which is always included as the company identifier',
+				displayOptions: {
+					show: {
+						'@version': [2],
+						'@tool': [true],
+						output: ['selected'],
+					},
+				},
 			},
 			{
 				displayName: 'Options',
@@ -367,7 +594,27 @@ export class ElvesoraEnrichment implements INodeType {
 					this.getNode(),
 					itemIndex,
 				);
-				const simplify = this.getNodeParameter('simplify', itemIndex, true) as boolean;
+				const node = this.getNode();
+				let outputMode: OutputMode;
+				let selectedFields: string[] = [];
+
+				if (node.typeVersion >= 2 && isAiToolNode(node)) {
+					outputMode = validatedOutputMode(
+						this.getNodeParameter('output', itemIndex, 'simplified'),
+						node,
+						itemIndex,
+					);
+					if (outputMode === 'selected') {
+						selectedFields = validatedSelectedFields(
+							this.getNodeParameter('fieldsToInclude', itemIndex, DEFAULT_SELECTED_FIELDS),
+							node,
+							itemIndex,
+						);
+					}
+				} else {
+					const simplify = this.getNodeParameter('simplify', itemIndex, true) as boolean;
+					outputMode = simplify ? 'simplified' : 'raw';
+				}
 				const options = this.getNodeParameter('options', itemIndex, {}) as IDataObject;
 				const idempotencyKey = validatedIdempotencyKey(
 					options.idempotencyKey,
@@ -428,7 +675,12 @@ export class ElvesoraEnrichment implements INodeType {
 
 				if (response.statusCode === 200 || response.statusCode === 400) {
 					returnData.push({
-						json: formattedOutput(withIdempotencyStatus(responseBody, response.headers), simplify),
+						json: formattedOutput(
+							withIdempotencyStatus(responseBody, response.headers),
+							domain,
+							outputMode,
+							selectedFields,
+						),
 						pairedItem: { item: itemIndex },
 					});
 					continue;

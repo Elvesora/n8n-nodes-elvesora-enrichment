@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-08-12
+
+### Added
+
+- Added Simplified, Raw, and Selected Fields output modes when the node is used as an AI Agent tool.
+- Added granular company, firmographic, idempotency, and credit-field selection while always preserving the domain identifier.
+
+### Changed
+
+- Made node version 2 the default while preserving the version 1 `simplify` setting for existing workflows.
+- Aligned the normal-workflow `Simplify` label with n8n's current UX guideline.
+- Updated package validation, automated tests, documentation, and the importable workflow for the version 2 behavior.
+
 ## [0.1.2] - 2026-08-12
 
 ### Changed

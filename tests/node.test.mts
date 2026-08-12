@@ -1,6 +1,7 @@
 import { inspect } from 'node:util';
 
 import {
+	displayParameter,
 	NodeApiError,
 	NodeConnectionTypes,
 	NodeOperationError,
@@ -38,9 +39,13 @@ interface ParameterFailure {
 interface ContextOptions {
 	domains?: unknown[];
 	simplify?: Array<boolean | undefined>;
+	output?: Array<unknown>;
+	fieldsToInclude?: Array<unknown>;
 	options?: Array<IDataObject | undefined>;
 	continueOnFail?: boolean;
 	parameterFailure?: ParameterFailure;
+	typeVersion?: number;
+	tool?: boolean;
 }
 
 type HttpRequest = (credentialType: string, options: IHttpRequestOptions) => Promise<unknown>;
@@ -60,9 +65,13 @@ function response(
 function createContext({
 	domains = ['example.com'],
 	simplify = [],
+	output = [],
+	fieldsToInclude = [],
 	options = [],
 	continueOnFail = false,
 	parameterFailure,
+	typeVersion = 1,
+	tool = false,
 }: ContextOptions = {}) {
 	const httpRequest = vi.fn<HttpRequest>();
 	const inputData: INodeExecutionData[] = domains.map((_, index) => ({
@@ -83,6 +92,10 @@ function createContext({
 					return domains[itemIndex];
 				case 'simplify':
 					return simplify[itemIndex] ?? defaultValue;
+				case 'output':
+					return output[itemIndex] ?? defaultValue;
+				case 'fieldsToInclude':
+					return fieldsToInclude[itemIndex] ?? defaultValue;
 				case 'options':
 					return options[itemIndex] ?? defaultValue;
 				default:
@@ -93,7 +106,11 @@ function createContext({
 	const context = {
 		continueOnFail: () => continueOnFail,
 		getInputData: () => inputData,
-		getNode: () => WORKFLOW_NODE,
+		getNode: () => ({
+			...WORKFLOW_NODE,
+			type: tool ? `${WORKFLOW_NODE.type}Tool` : WORKFLOW_NODE.type,
+			typeVersion,
+		}),
 		getNodeParameter,
 		helpers: {
 			httpRequestWithAuthentication: httpRequest,
@@ -134,7 +151,8 @@ describe('ElvesoraEnrichment node description', () => {
 			displayName: 'Elvesora Enrichment',
 			name: 'elvesoraEnrichment',
 			group: ['transform'],
-			version: 1,
+			version: [1, 2],
+			defaultVersion: 2,
 			subtitle: 'Enrich Company by Domain',
 			description: 'Enrich a company profile from its website domain using Elvesora',
 			defaults: { name: 'Elvesora Enrichment' },
@@ -158,13 +176,58 @@ describe('ElvesoraEnrichment node description', () => {
 				description: 'The company website domain to enrich, without a protocol or path',
 			},
 			{
-				displayName: 'Simplify Response',
+				displayName: 'Simplify',
 				name: 'simplify',
 				type: 'boolean',
 				default: true,
 				description:
 					'Whether to return a simplified version of the response instead of the raw data',
+				displayOptions: {
+					show: {
+						'@tool': [false],
+					},
+				},
 			},
+			{
+				displayName: 'Simplify',
+				name: 'simplify',
+				type: 'boolean',
+				default: true,
+				description:
+					'Whether to return a simplified version of the response instead of the raw data',
+				displayOptions: {
+					show: {
+						'@version': [1],
+						'@tool': [true],
+					},
+				},
+			},
+			expect.objectContaining({
+				displayName: 'Output',
+				name: 'output',
+				type: 'options',
+				noDataExpression: true,
+				default: 'simplified',
+				displayOptions: {
+					show: {
+						'@version': [2],
+						'@tool': [true],
+					},
+				},
+			}),
+			expect.objectContaining({
+				displayName: 'Selected Fields',
+				name: 'fieldsToInclude',
+				type: 'multiOptions',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						'@version': [2],
+						'@tool': [true],
+						output: ['selected'],
+					},
+				},
+			}),
 			{
 				displayName: 'Options',
 				name: 'options',
@@ -184,6 +247,68 @@ describe('ElvesoraEnrichment node description', () => {
 				],
 			},
 		]);
+
+		const output = description.properties.find((property) => property.name === 'output');
+		expect(output?.options).toEqual([
+			{
+				name: 'Simplified',
+				value: 'simplified',
+				description: 'Return a simplified version of the response',
+			},
+			{
+				name: 'Raw',
+				value: 'raw',
+				description: 'Return all available fields from the API response',
+			},
+			{
+				name: 'Selected Fields',
+				value: 'selected',
+				description: 'Return only the selected fields',
+			},
+		]);
+
+		const selectedFields = description.properties.find(
+			(property) => property.name === 'fieldsToInclude',
+		);
+		expect(selectedFields?.default).toEqual([
+			'result_type',
+			'message',
+			'company_name',
+			'industry',
+			'employee_count',
+			'hq_country',
+		]);
+		expect(selectedFields?.options).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ name: 'Company Name', value: 'company_name' }),
+				expect.objectContaining({ name: 'Contacts', value: 'contacts' }),
+				expect.objectContaining({
+					name: 'Credits Consumed by Request',
+					value: 'credits_consumed_by_request',
+				}),
+			]),
+		);
+		expect(selectedFields?.options).not.toEqual(
+			expect.arrayContaining([expect.objectContaining({ value: 'domain' })]),
+		);
+	});
+
+	it.each([
+		['normal version 1', 1, false, ['domain', 'simplify', 'options']],
+		['normal version 2', 2, false, ['domain', 'simplify', 'options']],
+		['tool version 1', 1, true, ['domain', 'simplify', 'options']],
+		['tool version 2', 2, true, ['domain', 'output', 'options']],
+	] as const)('shows the correct parameters for %s', (_label, typeVersion, tool, expectedNames) => {
+		const { description } = new ElvesoraEnrichment();
+		const nodeDescription = {
+			...description,
+			name: tool ? `${description.name}Tool` : description.name,
+		};
+		const visibleNames = description.properties
+			.filter((property) => displayParameter({}, property, { typeVersion }, nodeDescription))
+			.map((property) => property.name);
+
+		expect(visibleNames).toEqual(expectedNames);
 	});
 });
 
@@ -354,6 +479,255 @@ describe('ElvesoraEnrichment request construction and successful output', () => 
 		httpRequest.mockResolvedValueOnce(response({ success: true, data: [], credits: null }));
 
 		await expect(execute(context)).resolves.toEqual([[{ json: {}, pairedItem: { item: 0 } }]]);
+	});
+
+	it('preserves the version 1 simplify behavior when the node is used as an AI tool', async () => {
+		const body = { success: true, result_type: 'ENRICHED', data: { domain: 'example.com' } };
+		const { context, getNodeParameter, httpRequest } = createContext({
+			tool: true,
+			typeVersion: 1,
+			simplify: [false],
+		});
+		httpRequest.mockResolvedValueOnce(response(body));
+
+		await expect(execute(context)).resolves.toEqual([[{ json: body, pairedItem: { item: 0 } }]]);
+		expect(getNodeParameter).toHaveBeenCalledWith('simplify', 0, true);
+		expect(getNodeParameter).not.toHaveBeenCalledWith(
+			'output',
+			expect.anything(),
+			expect.anything(),
+		);
+	});
+
+	it('keeps Simplify for a normal version 2 node', async () => {
+		const body = { success: true, result_type: 'ENRICHED', data: { domain: 'example.com' } };
+		const { context, getNodeParameter, httpRequest } = createContext({
+			typeVersion: 2,
+			simplify: [false],
+		});
+		httpRequest.mockResolvedValueOnce(response(body));
+
+		await expect(execute(context)).resolves.toEqual([[{ json: body, pairedItem: { item: 0 } }]]);
+		expect(getNodeParameter).toHaveBeenCalledWith('simplify', 0, true);
+		expect(getNodeParameter).not.toHaveBeenCalledWith(
+			'output',
+			expect.anything(),
+			expect.anything(),
+		);
+	});
+
+	it('defaults a version 2 AI tool to simplified output without reading the normal-node toggle', async () => {
+		const { context, getNodeParameter, httpRequest } = createContext({
+			tool: true,
+			typeVersion: 2,
+		});
+		httpRequest.mockResolvedValueOnce(
+			response({
+				success: true,
+				result_type: 'ENRICHED',
+				data: { domain: 'example.com', company_name: 'Example' },
+			}),
+		);
+
+		await expect(execute(context)).resolves.toEqual([
+			[
+				{
+					json: { result_type: 'ENRICHED', company_name: 'Example', domain: 'example.com' },
+					pairedItem: { item: 0 },
+				},
+			],
+		]);
+		expect(getNodeParameter).toHaveBeenCalledWith('output', 0, 'simplified');
+		expect(getNodeParameter).not.toHaveBeenCalledWith(
+			'simplify',
+			expect.anything(),
+			expect.anything(),
+		);
+		expect(getNodeParameter).not.toHaveBeenCalledWith(
+			'fieldsToInclude',
+			expect.anything(),
+			expect.anything(),
+		);
+	});
+
+	it('returns every API field in Raw mode for a version 2 AI tool', async () => {
+		const body = {
+			success: true,
+			result_type: 'ENRICHED',
+			data: { domain: 'example.com', contacts: { emails: ['hello@example.com'] } },
+			credits: { remaining: 4 },
+		};
+		const { context, httpRequest } = createContext({
+			tool: true,
+			typeVersion: 2,
+			output: ['raw'],
+		});
+		httpRequest.mockResolvedValueOnce(response(body));
+
+		await expect(execute(context)).resolves.toEqual([[{ json: body, pairedItem: { item: 0 } }]]);
+	});
+
+	it('returns only selected available fields plus the canonical domain for a version 2 AI tool', async () => {
+		const { context, httpRequest } = createContext({
+			domains: [' fallback.example '],
+			tool: true,
+			typeVersion: 2,
+			output: ['selected'],
+			fieldsToInclude: [
+				[
+					'success',
+					'result_type',
+					'idempotency_status',
+					'company_name',
+					'legal_name',
+					'keywords',
+					'contacts',
+					'credits_remaining',
+					'credits_consumed_by_request',
+					'credits_limit',
+					'credits_used',
+					'credits_period_started_at',
+					'credits_period_ends_at',
+					'stock_symbol',
+					'company_name',
+				],
+			],
+		});
+		httpRequest.mockResolvedValueOnce(
+			response(
+				{
+					success: true,
+					result_type: 'ENRICHED',
+					data: {
+						domain: 'canonical.example',
+						legal_name: 'Canonical Legal Name',
+						keywords: ['software', 'automation'],
+						contacts: { emails: ['hello@canonical.example'] },
+					},
+					credits: {
+						limit: 100,
+						used: 1,
+						remaining: 99,
+						consumed_by_request: 1,
+						period_started_at: '2026-08-01',
+						period_ends_at: '2026-09-01',
+					},
+				},
+				200,
+				{ 'Idempotency-Status': 'REPLAYED' },
+			),
+		);
+
+		await expect(execute(context)).resolves.toEqual([
+			[
+				{
+					json: {
+						domain: 'canonical.example',
+						success: true,
+						result_type: 'ENRICHED',
+						idempotency_status: 'replayed',
+						company_name: 'Canonical Legal Name',
+						legal_name: 'Canonical Legal Name',
+						keywords: ['software', 'automation'],
+						contacts: { emails: ['hello@canonical.example'] },
+						credits_remaining: 99,
+						credits_consumed_by_request: 1,
+						credits_limit: 100,
+						credits_used: 1,
+						credits_period_started_at: '2026-08-01',
+						credits_period_ends_at: '2026-09-01',
+					},
+					pairedItem: { item: 0 },
+				},
+			],
+		]);
+	});
+
+	it('uses the version 2 Selected Fields defaults and top-level domain fallback', async () => {
+		const { context, getNodeParameter, httpRequest } = createContext({
+			tool: true,
+			typeVersion: 2,
+			output: ['selected'],
+		});
+		httpRequest.mockResolvedValueOnce(
+			response({
+				success: true,
+				result_type: 'ENRICHED',
+				message: 'Enriched',
+				domain: 'top-level.example',
+				data: {
+					company_name: 'Top Level',
+					industry: 'Software',
+					employee_count: 50,
+					hq_country: 'Spain',
+				},
+			}),
+		);
+
+		await expect(execute(context)).resolves.toEqual([
+			[
+				{
+					json: {
+						domain: 'top-level.example',
+						result_type: 'ENRICHED',
+						message: 'Enriched',
+						company_name: 'Top Level',
+						industry: 'Software',
+						employee_count: 50,
+						hq_country: 'Spain',
+					},
+					pairedItem: { item: 0 },
+				},
+			],
+		]);
+		expect(getNodeParameter).toHaveBeenCalledWith('fieldsToInclude', 0, [
+			'result_type',
+			'message',
+			'company_name',
+			'industry',
+			'employee_count',
+			'hq_country',
+		]);
+	});
+
+	it('always returns the normalized input domain when Selected Fields is empty', async () => {
+		const { context, httpRequest } = createContext({
+			domains: [' Identifier.Example '],
+			tool: true,
+			typeVersion: 2,
+			output: ['selected'],
+			fieldsToInclude: [[]],
+		});
+		httpRequest.mockResolvedValueOnce(response({ success: false, result_type: 'NOT_FOUND' }, 400));
+
+		await expect(execute(context)).resolves.toEqual([
+			[{ json: { domain: 'identifier.example' }, pairedItem: { item: 0 } }],
+		]);
+	});
+
+	it.each([
+		['invalid output mode', { output: ['unsupported'] }, 'Output mode is invalid'],
+		[
+			'non-array selected fields',
+			{ output: ['selected'], fieldsToInclude: ['company_name'] },
+			'Selected fields are invalid',
+		],
+		[
+			'unknown selected field',
+			{ output: ['selected'], fieldsToInclude: [['company_name', '__proto__']] },
+			'Selected fields are invalid',
+		],
+	] as const)('rejects %s for a version 2 AI tool', async (_label, parameters, message) => {
+		const { context, httpRequest } = createContext({
+			tool: true,
+			typeVersion: 2,
+			...parameters,
+		});
+
+		const error = await captureExecutionError(context);
+
+		expectNodeError(error, NodeOperationError, message);
+		expect(httpRequest).not.toHaveBeenCalled();
 	});
 
 	it.each([

@@ -51,8 +51,8 @@ const compiledRequestCalls = [];
 const compiledWorkflowNode = {
 	id: 'package-smoke',
 	name: 'Elvesora Enrichment',
-	type: 'n8n-nodes-elvesora-enrichment.elvesoraEnrichment',
-	typeVersion: 1,
+	type: 'n8n-nodes-elvesora-enrichment.elvesoraEnrichmentTool',
+	typeVersion: 2,
 	position: [0, 0],
 	parameters: {},
 };
@@ -64,7 +64,13 @@ const compiledExecutionContext = {
 
 		const values = {
 			domain: ' Example.COM ',
-			simplify: false,
+			output: 'selected',
+			fieldsToInclude: [
+				'result_type',
+				'message',
+				'idempotency_status',
+				'credits_consumed_by_request',
+			],
 			options: { idempotencyKey: ' package-smoke-key ' },
 		};
 
@@ -117,11 +123,11 @@ nodeAssert.deepStrictEqual(compiledExecutionResult, [
 	[
 		{
 			json: {
-				success: false,
+				domain: 'example.com',
 				result_type: 'NOT_FOUND',
 				message: 'No result',
-				credits: { consumed_by_request: 0, remaining: 10 },
 				idempotency_status: 'replayed',
+				credits_consumed_by_request: 0,
 			},
 			pairedItem: { item: 0 },
 		},
