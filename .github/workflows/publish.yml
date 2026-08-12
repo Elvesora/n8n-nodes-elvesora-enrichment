@@ -31,20 +31,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Require npm Trusted Publishing support
+        shell: bash
+        run: |
+          npm_version="$(npm --version)"
+          node -e "const [major, minor, patch] = '$npm_version'.split('.').map(Number); if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) throw new Error('npm 11.5.1 or newer is required for Trusted Publishing; found $npm_version')"
+
       - name: Require package version to match the Git tag
         run: node -e "const version = require('./package.json').version; if (version !== process.env.GITHUB_REF_NAME) throw new Error('Tag ' + process.env.GITHUB_REF_NAME + ' does not match package version ' + version)"
 
       - name: Verify source, tests, build, and package contents
         run: npm run verify
 
-      - name: Publish release
-        run: |
-          if [ -n "$NPM_TOKEN" ]; then
-            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          fi
-          npm run release
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish release with npm Trusted Publishing
+        run: npm run release
 
       - name: Wait for the published version to become available
         shell: bash
@@ -64,6 +64,21 @@ jobs:
         run: |
           set -euo pipefail
           package="n8n-nodes-elvesora-enrichment@${GITHUB_REF_NAME}"
-          scan_output="$(npx --yes @n8n/scan-community-package@0.32.0 "$package" 2>&1)"
-          printf '%s\n' "$scan_output"
-          grep -Fq 'has passed all security checks' <<<"$scan_output"
+          for attempt in {1..5}; do
+            set +e
+            scan_output="$(npx --yes @n8n/scan-community-package@0.32.0 "$package" 2>&1)"
+            scan_status=$?
+            set -e
+            printf '%s\n' "$scan_output"
+
+            if grep -Fq 'has passed all security checks' <<<"$scan_output"; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 5 ]; then
+              echo "n8n scanner did not confirm a passing package after $attempt attempts (last exit: $scan_status)." >&2
+              exit 1
+            fi
+
+            sleep "$((attempt * 10))"
+          done

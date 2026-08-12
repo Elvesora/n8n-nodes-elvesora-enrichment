@@ -82,13 +82,13 @@ Releases must come from the public GitHub repository through
 `.github/workflows/publish.yml`. Do not run `npm publish` from a local machine: n8n requires
 GitHub Actions provenance for community-node submissions.
 
-Before the first release:
+Trusted Publishing setup:
 
 1. Make the GitHub repository public and protect its default branch.
-2. Create the npm package through the workflow using a package-scoped granular `NPM_TOKEN`
-   secret. npm cannot configure a trusted publisher until the package exists.
-3. After the first release exists, configure npm Trusted Publishing for the `publish.yml`
-   workflow, remove the GitHub `NPM_TOKEN` secret, and revoke the bootstrap token.
+2. Configure npm Trusted Publishing for the `Elvesora/n8n-nodes-elvesora-enrichment`
+   repository and the `publish.yml` workflow, with no GitHub environment selected.
+3. Do not configure an `NPM_TOKEN` GitHub secret. The workflow publishes through short-lived
+   GitHub OIDC credentials and fails unless its npm version supports Trusted Publishing.
 
 For each release, start from a clean, reviewed `main` branch and run `npm run release` locally.
 The n8n release command updates the version and changelog, creates and pushes the Git tag, and

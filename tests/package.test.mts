@@ -161,6 +161,13 @@ describe('package metadata', () => {
 		expect(publishWorkflow).not.toContain('cache: npm');
 		expect(publishWorkflow).toContain('node-version: 24.x');
 		expect(publishWorkflow).not.toContain('node-version: lts/*');
+		expect(publishWorkflow).toContain('id-token: write');
+		expect(publishWorkflow).toContain('Require npm Trusted Publishing support');
+		expect(publishWorkflow).toContain('Publish release with npm Trusted Publishing');
+		expect(publishWorkflow).not.toContain('NPM_TOKEN');
+		expect(publishWorkflow).not.toContain('_authToken');
+		expect(publishWorkflow).toContain('for attempt in {1..5}');
+		expect(publishWorkflow).toContain('has passed all security checks');
 		expect(ciWorkflow).toContain(
 			'uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1',
 		);

@@ -16,6 +16,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Documented the tested n8n compatibility floor and verification versions.
 - Pinned GitHub Actions to immutable verified commits, removed persisted checkout credentials, and disabled release dependency caching.
 - Kept dependency vulnerability alerts enabled while disabling automated dependency branches and pull requests to preserve the direct-to-main workflow.
+- Switched npm publication to OIDC-only Trusted Publishing so no long-lived npm credential is exposed to the release job.
+- Added bounded retries around the required post-publication n8n security scan to tolerate transient registry or network failures.
 
 ## [0.1.1] - 2026-08-12
 
