@@ -163,8 +163,10 @@ describe('package metadata', () => {
 		expect(publishWorkflow).not.toContain('node-version: lts/*');
 		expect(publishWorkflow).toContain('id-token: write');
 		expect(publishWorkflow).toContain('Require npm Trusted Publishing support');
+		expect(publishWorkflow).toContain('npm 11.5.1 or newer is required');
 		expect(publishWorkflow).toContain('Publish release with npm Trusted Publishing');
 		expect(publishWorkflow).not.toContain('NPM_TOKEN');
+		expect(publishWorkflow).not.toContain('NODE_AUTH_TOKEN');
 		expect(publishWorkflow).not.toContain('_authToken');
 		expect(publishWorkflow).toContain('for attempt in {1..5}');
 		expect(publishWorkflow).toContain('has passed all security checks');

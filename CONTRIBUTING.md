@@ -86,7 +86,8 @@ Trusted Publishing setup:
 
 1. Make the GitHub repository public and protect its default branch.
 2. Configure npm Trusted Publishing for the `Elvesora/n8n-nodes-elvesora-enrichment`
-   repository and the `publish.yml` workflow, with no GitHub environment selected.
+   repository and the `publish.yml` workflow, with no GitHub environment selected and
+   `npm publish` selected as the allowed action.
 3. Do not configure an `NPM_TOKEN` GitHub secret. The workflow publishes through short-lived
    GitHub OIDC credentials and fails unless its npm version supports Trusted Publishing.
 
