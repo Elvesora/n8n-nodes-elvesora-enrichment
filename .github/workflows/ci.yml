@@ -15,22 +15,25 @@ permissions:
 
 jobs:
   verify:
-    name: Verify on Node.js ${{ matrix.node-version }}
-    runs-on: ubuntu-latest
+    name: Verify on ${{ matrix.os }} / Node.js ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
         node-version:
           - 22.22.0
           - 24.x
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm

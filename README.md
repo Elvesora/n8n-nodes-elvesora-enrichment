@@ -56,7 +56,7 @@ The credential cannot redirect requests to a custom host.
 1. Add **Elvesora Enrichment** to a workflow.
 2. Select the Elvesora credential.
 3. Enter a **Domain**, for example `example.com`.
-4. Choose whether to enable **Simplify**.
+4. Choose whether to enable **Simplify Response**.
 5. Optionally add an **Idempotency Key** under **Options**.
 6. Execute the workflow.
 
@@ -65,7 +65,7 @@ The credential cannot redirect requests to a custom host.
 | Parameter                 | Required | Default | Behavior                                                                                                     |
 | ------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------ |
 | Domain                    | Yes      | Empty   | Company website domain without a protocol or path. The node trims and lowercases it. Maximum 255 characters. |
-| Simplify                  | Yes      | `true`  | Returns selected commonly used fields. Disable it to return the complete API payload.                        |
+| Simplify Response         | Yes      | `true`  | Returns selected commonly used fields. Disable it to return the complete API payload.                        |
 | Options > Idempotency Key | No       | Empty   | Stable key for one logical request. Maximum 255 characters; control characters are rejected.                 |
 
 The node sends one request for each incoming item, in input order, with a 130-second client
@@ -75,7 +75,7 @@ timeout. It does not perform hidden or automatic retries.
 
 ### Simplified output
 
-With **Simplify** enabled, the node returns available values from this set:
+With **Simplify Response** enabled, the node returns available values from this set:
 
 - `result_type`
 - `message`
@@ -93,7 +93,7 @@ status, for example `result_type: NOT_FOUND`, and its API message.
 
 ### Raw output
 
-Disable **Simplify** when downstream steps need the complete company profile, credit metadata,
+Disable **Simplify Response** when downstream steps need the complete company profile, credit metadata,
 or the exact API response. A successful response has this general shape:
 
 ```json
@@ -185,7 +185,9 @@ adapting it to a real workflow.
 
 ## Development
 
-Use Node.js 22.22.0 or newer.
+Use Node.js 22.22.x or the current Node.js 24 LTS line. Those are the versions verified in CI;
+unsupported non-LTS or later development runtimes may require native build tools for n8n's
+development-only dependencies.
 
 ```bash
 npm install

@@ -1,7 +1,7 @@
 {
 	"name": "n8n-nodes-elvesora-enrichment",
-	"version": "0.1.0",
-	"description": "n8n community node for enriching company data from a website domain with the Elvesora Enrichment API.",
+	"version": "0.1.1",
+	"description": "n8n community node for enriching company profiles and firmographic data from website domains with the Elvesora Enrichment API.",
 	"license": "MIT",
 	"homepage": "https://github.com/Elvesora/n8n-nodes-elvesora-enrichment#readme",
 	"keywords": [
@@ -19,13 +19,13 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Elvesora/n8n-nodes-elvesora-enrichment.git"
+		"url": "git+https://github.com/Elvesora/n8n-nodes-elvesora-enrichment.git"
 	},
 	"bugs": {
 		"url": "https://github.com/Elvesora/n8n-nodes-elvesora-enrichment/issues"
 	},
 	"engines": {
-		"node": ">=22.22.0"
+		"node": "^22.22.0 || ^24.0.0"
 	},
 	"scripts": {
 		"build": "n8n-node build",
@@ -61,11 +61,11 @@
 		]
 	},
 	"devDependencies": {
-		"@n8n/node-cli": "0.43.2",
+		"@n8n/node-cli": "0.43.3",
 		"@vitest/coverage-v8": "4.1.10",
 		"eslint": "9.39.4",
-		"prettier": "3.8.3",
-		"release-it": "20.2.0",
+		"prettier": "3.9.6",
+		"release-it": "21.0.2",
 		"typescript": "5.9.3",
 		"vitest": "4.1.10"
 	},

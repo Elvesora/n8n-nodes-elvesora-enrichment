@@ -50,7 +50,7 @@ describe('package metadata', () => {
 	it('contains the identity and public npm metadata required by n8n', () => {
 		expect(manifest).toMatchObject({
 			name: 'n8n-nodes-elvesora-enrichment',
-			version: '0.1.0',
+			version: '0.1.1',
 			license: 'MIT',
 			homepage: 'https://github.com/Elvesora/n8n-nodes-elvesora-enrichment#readme',
 			author: {
@@ -60,19 +60,22 @@ describe('package metadata', () => {
 			},
 			repository: {
 				type: 'git',
-				url: 'https://github.com/Elvesora/n8n-nodes-elvesora-enrichment.git',
+				url: 'git+https://github.com/Elvesora/n8n-nodes-elvesora-enrichment.git',
 			},
 			bugs: {
 				url: 'https://github.com/Elvesora/n8n-nodes-elvesora-enrichment/issues',
 			},
 			engines: {
-				node: '>=22.22.0',
+				node: '^22.22.0 || ^24.0.0',
 			},
 			publishConfig: {
 				access: 'public',
 			},
 		});
 		expect(manifest.description.trim()).not.toBe('');
+		expect(manifest.description).toBe(
+			'n8n community node for enriching company profiles and firmographic data from website domains with the Elvesora Enrichment API.',
+		);
 		expect(manifest.keywords).toContain('n8n-community-node-package');
 		expect(manifest.keywords).toContain('n8n');
 	});
@@ -81,8 +84,16 @@ describe('package metadata', () => {
 		expect(manifest.files).toEqual(['dist']);
 		expect(manifest.dependencies).toBeUndefined();
 		expect(manifest.peerDependencies).toEqual({ 'n8n-workflow': '*' });
-		expect(manifest.devDependencies['@n8n/node-cli']).toBe('0.43.2');
+		expect(manifest.devDependencies['@n8n/node-cli']).toBe('0.43.3');
 		expect(manifest.devDependencies['@vitest/coverage-v8']).toBe('4.1.10');
+		expect(manifest.devDependencies.prettier).toBe('3.9.6');
+		expect(manifest.devDependencies['release-it']).toBe('21.0.2');
+	});
+
+	it('forces LF line endings for reproducible cross-platform checkouts', () => {
+		expect(readFileSync(resolve(packageRoot, '.gitattributes'), 'utf8')).toBe(
+			'* text=auto eol=lf\n',
+		);
 	});
 
 	it('registers the compiled credential and node entry points', () => {
@@ -116,6 +127,18 @@ describe('package metadata', () => {
 		});
 	});
 
+	it('publishes on a supported Node.js line with current GitHub Actions', () => {
+		const publishWorkflow = readFileSync(
+			resolve(packageRoot, '.github/workflows/publish.yml'),
+			'utf8',
+		);
+
+		expect(publishWorkflow).toContain('uses: actions/checkout@v7');
+		expect(publishWorkflow).toContain('uses: actions/setup-node@v7');
+		expect(publishWorkflow).toContain('node-version: 24.x');
+		expect(publishWorkflow).not.toContain('node-version: lts/*');
+	});
+
 	it('keeps node metadata and icons present in source', () => {
 		const nodeMetadata = JSON.parse(
 			readFileSync(
@@ -133,5 +156,11 @@ describe('package metadata', () => {
 		expect(nodeMetadata.resources.primaryDocumentation?.[0]?.url).toBe(manifest.homepage);
 		expect(existsSync(resolve(packageRoot, 'icons/elvesora-enrichment.svg'))).toBe(true);
 		expect(existsSync(resolve(packageRoot, 'icons/elvesora-enrichment.dark.svg'))).toBe(true);
+
+		for (const icon of ['elvesora-enrichment.svg', 'elvesora-enrichment.dark.svg']) {
+			const iconSource = readFileSync(resolve(packageRoot, 'icons', icon), 'utf8');
+			expect(iconSource).toContain('viewBox="0 0 637 637"');
+			expect(iconSource).toContain('x="21.5"');
+		}
 	});
 });

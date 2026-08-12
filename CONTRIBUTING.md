@@ -15,7 +15,7 @@ Thank you for helping improve the Elvesora Enrichment community node for n8n.
 
 Requirements:
 
-- Node.js 22.22.0 or newer
+- Node.js 22.22.x or Node.js 24 LTS
 - npm
 - A local n8n development environment for interactive node testing
 

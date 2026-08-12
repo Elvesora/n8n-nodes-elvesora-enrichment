@@ -135,7 +135,7 @@ describe('ElvesoraEnrichment node description', () => {
 			name: 'elvesoraEnrichment',
 			group: ['transform'],
 			version: 1,
-			subtitle: 'Enrich company by domain',
+			subtitle: 'Enrich Company by Domain',
 			description: 'Enrich a company profile from its website domain using Elvesora',
 			defaults: { name: 'Elvesora Enrichment' },
 			usableAsTool: true,
@@ -158,7 +158,7 @@ describe('ElvesoraEnrichment node description', () => {
 				description: 'The company website domain to enrich, without a protocol or path',
 			},
 			{
-				displayName: 'Simplify',
+				displayName: 'Simplify Response',
 				name: 'simplify',
 				type: 'boolean',
 				default: true,
