@@ -1,3 +1,4 @@
+import nodeAssert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
@@ -45,6 +46,87 @@ assert(
 	typeof credentialModule.ElvesoraEnrichmentApi === 'function',
 	'Compiled credential class cannot be loaded.',
 );
+
+const compiledRequestCalls = [];
+const compiledWorkflowNode = {
+	id: 'package-smoke',
+	name: 'Elvesora Enrichment',
+	type: 'n8n-nodes-elvesora-enrichment.elvesoraEnrichment',
+	typeVersion: 1,
+	position: [0, 0],
+	parameters: {},
+};
+const compiledExecutionContext = {
+	getInputData: () => [{ json: { source: 'package-smoke' } }],
+	getNode: () => compiledWorkflowNode,
+	getNodeParameter: (name, itemIndex, defaultValue) => {
+		nodeAssert.equal(itemIndex, 0);
+
+		const values = {
+			domain: ' Example.COM ',
+			simplify: false,
+			options: { idempotencyKey: ' package-smoke-key ' },
+		};
+
+		return values[name] ?? defaultValue;
+	},
+	continueOnFail: () => false,
+	helpers: {
+		httpRequestWithAuthentication: async (credentialType, options) => {
+			compiledRequestCalls.push({ credentialType, options });
+
+			return {
+				statusCode: 400,
+				headers: { 'Idempotency-Status': ' REPLAYED ' },
+				body: {
+					success: false,
+					result_type: 'NOT_FOUND',
+					message: 'No result',
+					credits: { consumed_by_request: 0, remaining: 10 },
+				},
+			};
+		},
+	},
+};
+
+const compiledExecutionResult = await new nodeModule.ElvesoraEnrichment().execute.call(
+	compiledExecutionContext,
+);
+
+nodeAssert.deepStrictEqual(compiledRequestCalls, [
+	{
+		credentialType: 'elvesoraEnrichmentApi',
+		options: {
+			method: 'POST',
+			url: 'https://enrichment.elvesora.com/api/v1/enrichment/company',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				'Idempotency-Key': 'package-smoke-key',
+			},
+			body: { domain: 'example.com' },
+			json: true,
+			timeout: 130_000,
+			returnFullResponse: true,
+			ignoreHttpStatusErrors: true,
+			disableFollowRedirect: true,
+		},
+	},
+]);
+nodeAssert.deepStrictEqual(compiledExecutionResult, [
+	[
+		{
+			json: {
+				success: false,
+				result_type: 'NOT_FOUND',
+				message: 'No result',
+				credits: { consumed_by_request: 0, remaining: 10 },
+				idempotency_status: 'replayed',
+			},
+			pairedItem: { item: 0 },
+		},
+	],
+]);
 
 const npmCli = process.env.npm_execpath;
 assert(npmCli !== undefined && existsSync(npmCli), 'npm CLI path is unavailable.');

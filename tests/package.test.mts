@@ -132,11 +132,29 @@ describe('package metadata', () => {
 			resolve(packageRoot, '.github/workflows/publish.yml'),
 			'utf8',
 		);
+		const ciWorkflow = readFileSync(resolve(packageRoot, '.github/workflows/ci.yml'), 'utf8');
 
-		expect(publishWorkflow).toContain('uses: actions/checkout@v7');
-		expect(publishWorkflow).toContain('uses: actions/setup-node@v7');
+		expect(publishWorkflow).toContain(
+			'uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1',
+		);
+		expect(publishWorkflow).toContain(
+			'uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0',
+		);
+		expect(publishWorkflow).toContain('persist-credentials: false');
+		expect(publishWorkflow).toContain('registry-url: https://registry.npmjs.org');
+		expect(publishWorkflow).toContain('package-manager-cache: false');
+		expect(publishWorkflow).not.toContain('cache: npm');
 		expect(publishWorkflow).toContain('node-version: 24.x');
 		expect(publishWorkflow).not.toContain('node-version: lts/*');
+		expect(ciWorkflow).toContain(
+			'uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1',
+		);
+		expect(ciWorkflow).toContain(
+			'uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0',
+		);
+		expect(ciWorkflow).toContain('persist-credentials: false');
+		expect(ciWorkflow).toContain('npm pack --dry-run --ignore-scripts');
+		expect(ciWorkflow).not.toContain('npm publish --dry-run');
 	});
 
 	it('keeps node metadata and icons present in source', () => {

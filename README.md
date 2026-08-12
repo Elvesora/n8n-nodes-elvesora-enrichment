@@ -33,6 +33,15 @@ depends on the configuration and policies of the n8n instance.
 Restart self-hosted n8n after installation if your deployment does not reload community nodes
 automatically.
 
+## Compatibility
+
+The minimum supported n8n version is 2.16.0. Compatibility has been verified with:
+
+- n8n 2.16.0: package discovery and complete node and credential UI rendering in the editor.
+- n8n 2.34.5: clean community-package installation, registration, startup, and health check.
+
+Older n8n versions have not been tested and are not claimed as supported.
+
 ## Credentials
 
 1. Sign in to [Elvesora Enrichment](https://enrichment.elvesora.com).

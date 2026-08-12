@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Added a CI smoke test that executes the compiled node entry point and validates its request and business-result output contract.
+- Made the post-release CI package check independent of whether the current version already exists on npm.
+- Documented the tested n8n compatibility floor and verification versions.
+- Pinned GitHub Actions to immutable verified commits, removed persisted checkout credentials, and disabled release dependency caching.
+- Grouped safe dependency updates and deferred incompatible ESLint and TypeScript major upgrades until n8n tooling supports them.
+
 ## [0.1.1] - 2026-08-12
 
 ### Changed
