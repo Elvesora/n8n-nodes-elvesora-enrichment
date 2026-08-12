@@ -68,7 +68,7 @@ describe('package metadata', () => {
 			},
 			repository: {
 				type: 'git',
-				url: 'git+https://github.com/Elvesora/n8n-nodes-elvesora-enrichment.git',
+				url: 'https://github.com/Elvesora/n8n-nodes-elvesora-enrichment.git',
 			},
 			bugs: {
 				url: 'https://github.com/Elvesora/n8n-nodes-elvesora-enrichment/issues',

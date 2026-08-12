@@ -17,6 +17,10 @@ function assert(condition, message) {
 
 assert(manifest.name === 'n8n-nodes-elvesora-enrichment', 'Unexpected package name.');
 assert(manifest.license === 'MIT', 'Package license must be MIT.');
+assert(
+	manifest.repository?.url === 'https://github.com/Elvesora/n8n-nodes-elvesora-enrichment.git',
+	'Package repository must use the public HTTPS GitHub URL expected by the n8n Creator Portal.',
+);
 assert(manifest.dependencies === undefined, 'Runtime dependencies are not allowed.');
 assert(
 	JSON.stringify(manifest.files) === JSON.stringify(['dist']),
