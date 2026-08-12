@@ -17,10 +17,12 @@ updates:
       - dependency-name: typescript
         update-types:
           - version-update:semver-major
-    open-pull-requests-limit: 5
+    # Keep dependency alerts enabled without creating update branches or pull requests.
+    open-pull-requests-limit: 0
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    # Keep the repository on its direct-to-main workflow.
+    open-pull-requests-limit: 0
