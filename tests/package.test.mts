@@ -41,16 +41,24 @@ interface PackageManifest {
 	peerDependencies: Record<string, string>;
 }
 
+interface PackageLock {
+	name: string;
+	version: string;
+	packages: Record<string, { name?: string; version?: string }>;
+}
+
 const packageRoot = resolve(import.meta.dirname, '..');
 const manifest = JSON.parse(
 	readFileSync(resolve(packageRoot, 'package.json'), 'utf8'),
 ) as PackageManifest;
+const packageLock = JSON.parse(
+	readFileSync(resolve(packageRoot, 'package-lock.json'), 'utf8'),
+) as PackageLock;
 
 describe('package metadata', () => {
 	it('contains the identity and public npm metadata required by n8n', () => {
 		expect(manifest).toMatchObject({
 			name: 'n8n-nodes-elvesora-enrichment',
-			version: '0.1.1',
 			license: 'MIT',
 			homepage: 'https://github.com/Elvesora/n8n-nodes-elvesora-enrichment#readme',
 			author: {
@@ -71,6 +79,13 @@ describe('package metadata', () => {
 			publishConfig: {
 				access: 'public',
 			},
+		});
+		expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/u);
+		expect(packageLock.name).toBe(manifest.name);
+		expect(packageLock.version).toBe(manifest.version);
+		expect(packageLock.packages['']).toMatchObject({
+			name: manifest.name,
+			version: manifest.version,
 		});
 		expect(manifest.description.trim()).not.toBe('');
 		expect(manifest.description).toBe(
